@@ -189,8 +189,20 @@ class AStar:
         radial: int = 120,
         n_iter: int = 5000,
         break_on_found: bool = False,
+        reduce_on_found: bool = True,
         return_route: bool = True,
+        reduce_factor=0.3,
     ):
+        import matplotlib.pyplot as plt
+
+        plt.plot(*self.bounds.exterior.coords.xy)
+        for nfz in self.nfzs:
+            plt.plot(*nfz.exterior.coords.xy, c="red")
+        plt.scatter(start[0], start[1], c="green")
+        plt.scatter(goal[0], goal[1], c="blue")
+        plt.show()
+
+        print(self.bounds, self.nfzs, start, goal)
 
         self.goal = goal
         self.ovs = ovs
@@ -204,13 +216,20 @@ class AStar:
         min_valid_g = float("inf")
 
         print("Searching for a valid route...")
-        for _ in trange(n_iter, colour="#3399ff", desc="A* Path finding"):
+        for i in trange(n_iter, colour="#3399ff", desc="A* Path finding"):
             # if i % 1000 == 0:
-            #     plt.scatter(*self.start.pos, c='green')
-            #     plt.scatter(*self.goal, c='red')
+            #     plt.plot(*self.bounds.exterior.coords.xy)
+            #     plt.scatter(*self.start.pos, c="green")
+            #     plt.scatter(*self.goal, c="red")
+            #     print(self.active.peekitem())
+
+            #     for k, n__ in self.closed.items():
+            #         plt.scatter(*k, c="black")
+            #         if n__.parent is not None:
+            #             plt.plot([k[0], n__.parent.pos[0]], [k[1], n__.parent.pos[1]], c="black")
 
             #     for nfz in self.nfzs:
-            #         plt.plot(*nfz.exterior.coords.xy, c='red')
+            #         plt.plot(*nfz.exterior.coords.xy, c="red")
             #     plt.show()
 
             if len(self.active) <= 0:
@@ -226,6 +245,8 @@ class AStar:
 
             if active_node.pos == self.goal and break_on_found:
                 break
+            elif active_node.pos == self.goal and reduce_on_found:
+                dist = dist * reduce_factor
 
             if active_node == self.start:
                 self.expand_point(active_node, sep=sep, dist=dist, radial=360)
@@ -331,9 +352,6 @@ class AStar:
 
                     if d > _min:
                         continue
-
-                    # if d > _min:
-                    #     continue
 
                     h = get_heading(*start, *point) - goal_heading
 

@@ -29,7 +29,7 @@ from src.Simulation import Simulator
 __author__ = "Ellis Thompson"
 
 # Constants
-ROUTE_PATH = Path(".\\Google Earth Files\\DC_map") if os.name != "posix" else Path("./Google Earth Files/DC_map")
+ROUTE_PATH = Path(".\\Google Earth Files\\test_map") if os.name != "posix" else Path("./Google Earth Files/test_map")
 OUT_PATH = Path(".\\out\\") if os.name != "posix" else Path("./out/")
 COLOURS = [
     (255, 0, 0),
@@ -57,57 +57,6 @@ def main(
     # Import airspace from file
     airspace: dict = prepareSpace(ROUTE_PATH)
     ovs = Airspace(airspace["airspace"])
-    # ovs.load_airspace(
-    #     [
-    #         "Airspace OVs/8-2 20 Operational Volumes 1.npy",
-    #         "Airspace OVs/2-0 80 Operational Volumes 2.npy",
-    #         "Airspace OVs/4-8 120 Operational Volumes 3.npy",
-    #         "Airspace OVs/2-5 60 Operational Volumes 4.npy",
-    #         "Airspace OVs/5-0 100 Operational Volumes 5.npy",
-    #         "Airspace OVs/4-7 100 Operational Volumes 6.npy",
-    #         "Airspace OVs/5-8 210 Operational Volumes 7.npy",
-    #         "Airspace OVs/0-5 230 Operational Volumes 8.npy",
-    #         "Airspace OVs/8-5 160 Operational Volumes 9.npy",
-    #         "Airspace OVs/2-3 120 Operational Volumes 10.npy",
-    #     ],
-    #     [
-    #         248,
-    #         188,
-    #         22,
-    #         157,
-    #         117,
-    #         7,
-    #         109,
-    #         0,
-    #         202,
-    #         166,
-    #         41,
-    #         83,
-    #         223,
-    #         94,
-    #         92,
-    #         52,
-    #         79,
-    #         18,
-    #         64,
-    #         125,
-    #         131,
-    #         289,
-    #         163,
-    #         13,
-    #         300,
-    #         1,
-    #         14,
-    #         38,
-    #         97,
-    #         188,
-    #         249,
-    #     ],
-    # )
-    # ovs.load_airspace(['Airspace OVs/shperoid Operational Volumes.npy'], [0])
-
-    # ovs_np = np.load('Airspace OVs\Operational Volumes.npy', allow_pickle=True)
-    # ovs = [((i*60)-180, Polygon(ov)) for i, ov in enumerate(ovs_np)]
 
     # Pick some random points if none are provided
     if not points or len(points) < 2:
@@ -136,21 +85,7 @@ def main(
         raise ValueError(f"{method}, is not a valid route generation technique")
 
     np.save(Path.joinpath(date_path, "Route.npy"), route)
-    # return
 
-    # Prepare KML output
-    # GEarth: EarthKML = EarthKML(str(path))
-    # GEarth.addLine(
-    #     routeToLL(airspace, rrt.optimised_route),
-    #     f'Path {points[0]}-{points[1]}',
-    #     colour=(255, 255, 255),
-    # )
-    # GEarth.save()
-
-    # Save the route
-    # unoptimised, optimised = rrt.saveRoutes(
-    #     f'{str(date_path)}/({points[0]}-{points[1]})', airspace)
-    # Run the simulation
     traces, operational_volumes = runSim(
         route, airspace=airspace, speed_bounds=speed_bounds, show_plots=True, n_ac=n_ac
     )
@@ -233,7 +168,7 @@ def genRRT(
     return rrt
 
 
-def genAStar(start: int, goal: int, airspace: dict, ovs, speed_bounds, n_iter=20000, dist=500, show_plots=True):
+def genAStar(start: int, goal: int, airspace: dict, ovs, speed_bounds, n_iter=20000, dist=5000, show_plots=True):
     # Initilise RRT class
     offset = np.random.poisson(lam=5) * 20
     # offset = -27
@@ -368,7 +303,7 @@ def genOVs(
 
 if __name__ == "__main__":
     main(
-        list(np.random.choice(list(range(9)), size=2, replace=False)),
+        [0, 1],
         show_plots=True,
         max_workers=20,
         method="AStar",

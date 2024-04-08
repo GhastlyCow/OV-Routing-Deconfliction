@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.functions import prepareSpace
 
-ROUTE_PATH = Path(".\\Google Earth Files\\dfw_small") if os.name != "posix" else Path("./Google Earth Files/dfw_small")
+ROUTE_PATH = Path(".\\Google Earth Files\\test_map") if os.name != "posix" else Path("./Google Earth Files/test_map")
 airspace: dict = prepareSpace(ROUTE_PATH)
 
 print(airspace.keys())
