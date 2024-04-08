@@ -202,7 +202,7 @@ class AStar:
         plt.scatter(goal[0], goal[1], c="blue")
         plt.show()
 
-        print(self.bounds, self.nfzs, start, goal)
+        # print(self.bounds, self.nfzs, start, goal)
 
         self.goal = goal
         self.ovs = ovs

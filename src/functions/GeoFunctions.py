@@ -18,8 +18,8 @@ def polyToList(polygon):
 def polyToXY(polygon, reference):
     print(polygon, reference)
 
-    # ell = pm.Ellipsoid(6378137, 6356752.314245)
-    ell = pm.Ellipsoid("wgs84")
+    ell = pm.Ellipsoid(6378137, 6356752.314245)
+    # ell = pm.Ellipsoid("wgs84")
     return Polygon(
         [
             list(
@@ -56,7 +56,7 @@ def airspaceToXY(airspace: dict):
         new_airspace["nfzs"][key] = polyToXY(val, reference)
 
     # ell = pm.Ellipsoid(6378137, 6356752.314245)
-    ell = pm.Ellipsoid("wgs84")
+    ell = pm.Ellipsoid(6378137, 6356752.314245)
 
     for point in airspace["points"]:
 
@@ -80,7 +80,7 @@ def airspaceToXY(airspace: dict):
 
 def routeToLL(airspace: dict, route):
     # ell = pm.Ellipsoid(6378137, 6356752.314245)
-    ell = pm.Ellipsoid("wgs84")
+    ell = pm.Ellipsoid(6378137, 6356752.314245)
     reference = getAirspaceRef(airspace)
     return [
         Point(

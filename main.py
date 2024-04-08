@@ -168,10 +168,8 @@ def genRRT(
     return rrt
 
 
-def genAStar(start: int, goal: int, airspace: dict, ovs, speed_bounds, n_iter=20000, dist=5000, show_plots=True):
-    # Initilise RRT class
+def genAStar(start: int, goal: int, airspace: dict, ovs, speed_bounds, n_iter=50000, dist=500, show_plots=True):
     offset = np.random.poisson(lam=5) * 20
-    # offset = -27
 
     found = False
 
@@ -306,7 +304,7 @@ if __name__ == "__main__":
         [0, 1],
         show_plots=True,
         max_workers=20,
-        method="AStar",
+        method="RRT",
         ov_mode="spheroid",
         n_ac=100,
         speed_bounds=[17, 21],
