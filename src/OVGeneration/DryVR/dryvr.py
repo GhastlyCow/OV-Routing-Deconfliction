@@ -1,7 +1,5 @@
 """This generates OVs for a given set of traces
 """
-# Imports
-from typing import List, Tuple
 
 import numpy as np
 
@@ -16,13 +14,18 @@ def dryvrConcurr(*args):
     return dryvrMain(args[0], args[1])
 
 
-def dryvrMain(traces: np.ndarray, n_traces: int = 20,):
+def dryvrMain(
+    traces: np.ndarray,
+    n_traces: int = 20,
+):
     if traces.shape[0] < 15:
-        raise ValueError('The system requires a minimum of 15 traces')
+        raise ValueError("The system requires a minimum of 15 traces")
 
     if 15 <= traces.shape[0] < n_traces:
         print(
-            f'[WARNING]: Running the generation with {traces.shape[0]} which is above the minimum 15 but less than specified {n_traces} traces!')
+            f"[WARNING]: Running the generation with {traces.shape[0]} which is above the minimum 15 but less than"
+            + f"specified {n_traces} traces!"
+        )
 
     if traces.shape[0] <= n_traces:
         training_traces = traces
@@ -32,7 +35,7 @@ def dryvrMain(traces: np.ndarray, n_traces: int = 20,):
 
     training_traces = training_traces[:, :, 0:4]
 
-    center = (training_traces.max(axis=0)+training_traces.min(axis=0))/2
+    center = (training_traces.max(axis=0) + training_traces.min(axis=0)) / 2
 
     training_traces = np.append([center], training_traces, axis=0)
 
@@ -60,8 +63,7 @@ def dryvrRun(training_traces: np.ndarray, centre_idx: int = 0) -> np.ndarray:
     initial_radii = compute_radii(training_traces, centre_trace)
     discrepancy_parameters = discrepancy_params(training_traces, initial_radii)
 
-    result = compute_reachtube(
-        centre_trace, initial_radii, discrepancy_parameters, method='PWGlobal')
+    result = compute_reachtube(centre_trace, initial_radii, discrepancy_parameters, method="PWGlobal")
 
     # Ensure 100% training accuracy (all trajectories are contained)
     for trace_ind in range(training_traces.shape[0]):
@@ -69,13 +71,14 @@ def dryvrRun(training_traces: np.ndarray, centre_idx: int = 0) -> np.ndarray:
             assert np.all(result[:, 0, :] <= training_traces[trace_ind, 1:, :])
             assert np.all(result[:, 1, :] >= training_traces[trace_ind, 1:, :])
         except AssertionError:
-            raise ValueError(
-                f"Trace #{trace_ind} of this initial set is not contained in the initial set") from None
+            raise ValueError(f"Trace #{trace_ind} of this initial set is not contained in the initial set") from None
 
     return result
 
 
-def compute_reachtube(centre_trace: np.ndarray, initial_radii: np.ndarray, d_params: np.ndarray, method: str = 'PWGlobal') -> np.ndarray:
+def compute_reachtube(
+    centre_trace: np.ndarray, initial_radii: np.ndarray, d_params: np.ndarray, method: str = "PWGlobal"
+) -> np.ndarray:
     """Computes a reachtube for a set of traces, radii and parameters.
 
     Args:
@@ -92,9 +95,8 @@ def compute_reachtube(centre_trace: np.ndarray, initial_radii: np.ndarray, d_par
 
     trace_len, num_dims = centre_trace.shape  # This includes time
 
-    if method != 'PWGlobal':
-        raise ValueError(
-            f'Discrepancy computation method, \'{method}\', is not supported!')
+    if method != "PWGlobal":
+        raise ValueError(f"Discrepancy computation method, '{method}', is not supported!")
 
     df = np.zeros((trace_len, num_dims))
     alldims_linear_separators = d_params
@@ -110,18 +112,19 @@ def compute_reachtube(centre_trace: np.ndarray, initial_radii: np.ndarray, d_par
             assert prev_ind == start_ind
             assert start_ind < end_ind
             start_ind, end_ind = int(start_ind), int(end_ind)
-            segment_t = centre_trace[start_ind:end_ind + 1, 0]
-            segment_df = normalised_initial_radii[dim_ind - 1] * np.exp(
-                y_intercept + slope * segment_t)
+
+            segment_t = centre_trace[start_ind : end_ind + 1, 0]  # noqa: E203
+
+            segment_df = normalised_initial_radii[dim_ind - 1] * np.exp(y_intercept + slope * segment_t)
             segment_df[0] = max(segment_df[0], prev_val)
-            df[start_ind:end_ind + 1, dim_ind] = segment_df
+
+            df[start_ind : end_ind + 1, dim_ind] = segment_df  # noqa: E203
+
             prev_val = segment_df[-1]
             prev_ind = end_ind
-    assert (np.all(df >= 0))
+    assert np.all(df >= 0)
     reachtube_segment = np.zeros((trace_len - 1, 2, num_dims))
-    reachtube_segment[:, 0, :] = np.minimum(
-        centre_trace[1:, :] - df[1:, :], centre_trace[:-1, :] - df[:-1, :])
-    reachtube_segment[:, 1, :] = np.maximum(
-        centre_trace[1:, :] + df[1:, :], centre_trace[:-1, :] + df[:-1, :])
+    reachtube_segment[:, 0, :] = np.minimum(centre_trace[1:, :] - df[1:, :], centre_trace[:-1, :] - df[:-1, :])
+    reachtube_segment[:, 1, :] = np.maximum(centre_trace[1:, :] + df[1:, :], centre_trace[:-1, :] + df[:-1, :])
 
     return reachtube_segment

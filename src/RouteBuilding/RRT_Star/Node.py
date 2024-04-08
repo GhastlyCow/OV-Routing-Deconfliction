@@ -1,6 +1,7 @@
 """This holds the code for a Node for RRT*-FN.
 The Node holds specific information used by the Graph
 """
+
 # Imports
 
 from shapely.geometry import Point

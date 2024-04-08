@@ -1,4 +1,3 @@
-from scipy.spatial.distance import cdist
 import numpy as np
 import scipy as sp
 
@@ -14,13 +13,10 @@ def compute_radii(training_traces: np.ndarray, centre_trace: np.ndarray) -> np.n
         np.ndarray: Returns the radii.
     """
 
-    return np.max(np.abs(centre_trace[0, 1:4] -
-                         training_traces[:, 0, 1:4]), axis=0)+1e-10
+    return np.max(np.abs(centre_trace[0, 1:4] - training_traces[:, 0, 1:4]), axis=0) + 1e-10
 
 
-def discrepancy_params(
-    training_traces: np.ndarray, initial_radii: np.ndarray, method: str = "PWGlobal"
-) -> np.ndarray:
+def discrepancy_params(training_traces: np.ndarray, initial_radii: np.ndarray, method: str = "PWGlobal") -> np.ndarray:
     """Calculate the discrepencacy parameters for DryVR
 
     Args:
@@ -76,8 +72,7 @@ def discrepancy_params(
 
         for dim_ind in range(1, num_dims):  # For each dimension (without time)
             new_min = min(
-                np.min(points[dim_ind - 1, 1:, 1]) +
-                -100,
+                np.min(points[dim_ind - 1, 1:, 1]) + -100,
                 -0.25,
             )
 
@@ -102,41 +97,30 @@ def discrepancy_params(
                 df[0, dim_ind] = initial_radii[dim_ind - 1]
                 # Tuple order is start_time, end_time, slope, y-intercept
 
-            cur_dim_points = np.concatenate(
-                (points[dim_ind - 1, 1:, :], new_points), axis=0
-            )
+            cur_dim_points = np.concatenate((points[dim_ind - 1, 1:, :], new_points), axis=0)
 
             cur_hull = sp.spatial.ConvexHull(cur_dim_points)
 
-            vert_inds = list(
-                zip(cur_hull.vertices[:-1], cur_hull.vertices[1:]))
+            vert_inds = list(zip(cur_hull.vertices[:-1], cur_hull.vertices[1:]))
             vert_inds.append((cur_hull.vertices[-1], cur_hull.vertices[0]))
 
             linear_separators = []
             for end_ind, start_ind in vert_inds:
                 if (
-                    cur_dim_points[start_ind, 1] != new_min
-                    and cur_dim_points[end_ind, 1] != new_min
+                    cur_dim_points[start_ind, 1] != new_min and cur_dim_points[end_ind, 1] != new_min
                 ):  # If not a true minimum
-                    slope = (
-                        cur_dim_points[end_ind, 1] -
-                        cur_dim_points[start_ind, 1]
-                    ) / (cur_dim_points[end_ind, 0] - cur_dim_points[start_ind, 0])
-
-                    y_intercept = (
-                        cur_dim_points[start_ind, 1]
-                        - cur_dim_points[start_ind, 0] * slope
+                    slope = (cur_dim_points[end_ind, 1] - cur_dim_points[start_ind, 1]) / (
+                        cur_dim_points[end_ind, 0] - cur_dim_points[start_ind, 0]
                     )
+
+                    y_intercept = cur_dim_points[start_ind, 1] - cur_dim_points[start_ind, 0] * slope
                     start_time = cur_dim_points[start_ind, 0]
                     end_time = cur_dim_points[end_ind, 0]
 
                     assert start_time < end_time
 
                     if start_time == 0:
-                        linear_separators.append(
-                            (start_time, end_time, slope,
-                             y_intercept, 0, end_ind + 1)
-                        )
+                        linear_separators.append((start_time, end_time, slope, y_intercept, 0, end_ind + 1))
                     else:
                         linear_separators.append(
                             (
@@ -154,9 +138,7 @@ def discrepancy_params(
         return alldims_linear_separators
 
 
-def all_sensitivities_calc(
-    training_traces: np.ndarray, initial_radii: np.ndarray
-) -> np.ndarray:
+def all_sensitivities_calc(training_traces: np.ndarray, initial_radii: np.ndarray) -> np.ndarray:
     """Calculates the sensitivities
 
     Args:
@@ -172,16 +154,11 @@ def all_sensitivities_calc(
     # Normalise the radii
     normalizing_initial_set_radii = normalise_radii(initial_radii)
 
-    y_points = np.zeros(
-        (normalizing_initial_set_radii.shape[0], trace_len - 1))
+    y_points = np.zeros((normalizing_initial_set_radii.shape[0], trace_len - 1))
 
     for cur_dim_ind in range(1, ndims):
-        normalized_initial_points = (
-            training_traces[:, 0, 1:] / normalizing_initial_set_radii
-        )
-        initial_distances = sp.spatial.distance.pdist(
-            normalized_initial_points, "chebyshev"
-        )
+        normalized_initial_points = training_traces[:, 0, 1:] / normalizing_initial_set_radii
+        initial_distances = sp.spatial.distance.pdist(normalized_initial_points, "chebyshev")
         for cur_time_ind in range(1, trace_len):
 
             t = (

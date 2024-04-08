@@ -1,6 +1,3 @@
-import os
-from time import perf_counter, sleep
-
 import bluesky as bs
 import geopy
 import geopy.distance
@@ -8,11 +5,10 @@ import numpy as np
 import pyproj
 import tqdm
 from bluesky.simulation import ScreenIO
-from matplotlib.patches import Ellipse
 from math import isnan
-from shapely import Point, Polygon
+from shapely import Point
 
-geodesic = pyproj.Geod(ellps='WGS84')
+geodesic = pyproj.Geod(ellps="WGS84")
 
 
 class ScreenDummy(ScreenIO):
@@ -22,13 +18,13 @@ class ScreenDummy(ScreenIO):
     method so that console messages are printed.
     """
 
-    def echo(self, text='', flags=0):
+    def echo(self, text="", flags=0):
         """Just print echo messages"""
         print("BlueSky console:", text)
 
 
 # initialize bluesky as non-networked simulation node
-bs.init(mode='sim', detached=True)
+bs.init(mode="sim", detached=True)
 
 # initialize dummy screen
 bs.scr = ScreenDummy()
@@ -51,21 +47,29 @@ class Simulator:
             n = sphere.shape[0]
 
         for i in range(n):
-            h = geodesic.inv(sphere[i, 1], sphere[i, 0], route[start, 1], route[start, 0])[
-                0]+np.random.uniform(-45, 45)
+            h = geodesic.inv(sphere[i, 1], sphere[i, 0], route[start, 1], route[start, 0])[0] + np.random.uniform(
+                -45, 45
+            )
             if isnan(h):
                 h = 0
-            bs.traf.cre(acid=f'D{self.i}', actype='AMZN',
-                        aclat=sphere[i, 0], aclon=sphere[i, 1], acalt=200, achdg=h, acspd=np.random.randint(*self.speed_bounds))
+            bs.traf.cre(
+                acid=f"D{self.i}",
+                actype="AMZN",
+                aclat=sphere[i, 0],
+                aclon=sphere[i, 1],
+                acalt=200,
+                achdg=h,
+                acspd=np.random.randint(*self.speed_bounds),
+            )
 
             for j in range(start, len(route)):
-                bs.stack.stack(f'ADDWPTMODE D{self.i} FLYOVER')
-                bs.stack.stack(f'ADDWPT D{self.i} {route[j,0]},{route[j,1]}')
+                bs.stack.stack(f"ADDWPTMODE D{self.i} FLYOVER")
+                bs.stack.stack(f"ADDWPT D{self.i} {route[j,0]},{route[j,1]}")
 
             # bs.stack.stack(f'ADDWPTMODE D{self.i} FLYOVER')
-            bs.stack.stack(f'ADDWPT D{self.i} {route[-1,0]},{route[-1,1]}')
-            bs.stack.stack(f'VNAV D{self.i} ON')
-            bs.stack.stack(f'LNAV D{self.i} ON')
+            bs.stack.stack(f"ADDWPT D{self.i} {route[-1,0]},{route[-1,1]}")
+            bs.stack.stack(f"VNAV D{self.i} ON")
+            bs.stack.stack(f"LNAV D{self.i} ON")
 
             self.i += 1
 
@@ -82,8 +86,7 @@ class Simulator:
         # distributions = distributions/np.sum(distributions)
 
         pbar = tqdm.tqdm(total=len(wptAircraft))
-        pbar.set_description(
-            f"Generating aircraft from {len(wptAircraft)} start positions")
+        pbar.set_description(f"Generating aircraft from {len(wptAircraft)} start positions")
 
         max_arg = np.argmax(distributions)
 
@@ -91,16 +94,14 @@ class Simulator:
             to_gen = distributions[i]
 
             if i == max_arg and np.sum(distributions) < n:
-                to_gen += n-np.sum(distributions)
+                to_gen += n - np.sum(distributions)
             orig_pos = [self.states[ac][offset][1:3] for ac in aircraft]
-            positions = np.array(remove_outliers(
-                np.array([self.states[ac][offset][1:3] for ac in aircraft])))
-            
-            if len(positions) ==0:
+            positions = np.array(remove_outliers(np.array([self.states[ac][offset][1:3] for ac in aircraft])))
+
+            if len(positions) == 0:
                 positions = orig_pos
             # try:
-            new_starts = self.getStartSphere(
-                positions, to_gen)
+            new_starts = self.getStartSphere(positions, to_gen)
             self.initilise(self.route, len(new_starts), new_starts, wpt)
             # except Exception:
             #     print('Error generating starting shpere with input positions:')
@@ -131,14 +132,18 @@ class Simulator:
         try:
             start = geopy.Point(np.median(points, axis=0))
         except ValueError:
-            print('\n', points)
+            print("\n", points)
             print(np.median(points, axis=0))
             raise ValueError()
 
         d = geopy.distance.distance(meters=distance)
 
-        ls = [d.destination(point=start, bearing=0), d.destination(point=start, bearing=90), d.destination(
-            point=start, bearing=180), d.destination(point=start, bearing=270)]
+        ls = [
+            d.destination(point=start, bearing=0),
+            d.destination(point=start, bearing=90),
+            d.destination(point=start, bearing=180),
+            d.destination(point=start, bearing=270),
+        ]
         ls = [[p.latitude, p.longitude] for p in ls]
 
         sphere = []
@@ -147,10 +152,9 @@ class Simulator:
         pbar.set_description(f"Generating {n} points in sphere")
 
         while len(sphere) < n:
-            new_p = np.random.uniform(
-                np.min(ls, axis=0), np.max(ls, axis=0), size=2)
+            new_p = np.random.uniform(np.min(ls, axis=0), np.max(ls, axis=0), size=2)
 
-            if any(nfz.contains(Point(new_p[1], new_p[0])) for nfz in self.airspace['nfzs'].values()):
+            if any(nfz.contains(Point(new_p[1], new_p[0])) for nfz in self.airspace["nfzs"].values()):
                 continue
 
             if geopy.distance.geodesic(np.median(points, axis=0), new_p).meters <= distance:
@@ -168,19 +172,29 @@ class Simulator:
 
             for i in range(len(lats)):
                 d = geopy.distance.distance(meters=np.random.uniform(0, 5))
-                r = d.destination(
-                    point=(lats[i], lons[i]), bearing=bs.traf.hdg[i]+np.random.choice([90, -90], 1))
+                r = d.destination(point=(lats[i], lons[i]), bearing=bs.traf.hdg[i] + np.random.choice([90, -90], 1))
                 lats[i] = r.latitude
                 lons[i] = r.longitude
 
-            self.globalsim.append([bs.sim.simt, bs.traf.id[:], lats[:],
-                                   lons[:], bs.traf.alt[:], bs.traf.hdg[:], bs.traf.tas[:], bs.traf.actwp.lat[:], bs.traf.actwp.lon[:]])
+            self.globalsim.append(
+                [
+                    bs.sim.simt,
+                    bs.traf.id[:],
+                    lats[:],
+                    lons[:],
+                    bs.traf.alt[:],
+                    bs.traf.hdg[:],
+                    bs.traf.tas[:],
+                    bs.traf.actwp.lat[:],
+                    bs.traf.actwp.lon[:],
+                ]
+            )
         bs.sim.step()
 
         self.checkRemove()
 
     def convertData(self):
-        for data in tqdm.tqdm(self.globalsim, desc='Converting Data'):
+        for data in tqdm.tqdm(self.globalsim, desc="Converting Data"):
             sim_t = data[0]
             traf = data[1]
             data = np.array(data[2:])
@@ -188,14 +202,13 @@ class Simulator:
             for idx, _id in enumerate(traf):
                 state = np.array([sim_t, *data[:, idx]])
                 if _id in self.states:
-                    self.states[_id] = np.append(
-                        self.states[_id], [state], axis=0)
+                    self.states[_id] = np.append(self.states[_id], [state], axis=0)
                 else:
                     self.states[_id] = np.array([state])
 
     def checkRemove(self, remove=False):
         if not remove:
-            for i in np.where(bs.traf.swlnav == False)[0][::-1]:
+            for i in np.where(bs.traf.swlnav is False)[0][::-1]:
 
                 pos = -2 if len(self.globalsim) > 1 else 0
 
@@ -203,20 +216,19 @@ class Simulator:
                 self.globalsim[-1][3][i] = self.globalsim[pos][3][i]
                 self.globalsim[-1][4][i] = self.globalsim[pos][4][i]
                 self.globalsim[-1][5][i] = self.globalsim[pos][5][i]
-                bs.stack.stack(f'HDG {bs.traf.id[i]} {bs.traf.hdg[i]}')
+                bs.stack.stack(f"HDG {bs.traf.id[i]} {bs.traf.hdg[i]}")
         else:
-            for i in np.where(bs.traf.swlnav == False)[0][::-1]:
+            for i in np.where(bs.traf.swlnav is False)[0][::-1]:
                 bs.traf.delete(i)
 
     def run(self, seconds=None, interval=1):
         s = False
         i = 0
 
-        n = float('inf') if seconds is None else seconds / 0.1
+        n = float("inf") if seconds is None else seconds / 0.1
 
         pbar = tqdm.tqdm(total=n)
-        pbar.set_description(
-            f"Running aircraft simulation to {'completion' if n > 1e50 else n}")
+        pbar.set_description(f"Running aircraft simulation to {'completion' if n > 1e50 else n}")
 
         while (bs.traf.ntraf > 0 or not s) and i < n:
             self.step(bs.sim.simt % interval == 0)
@@ -234,8 +246,6 @@ class Simulator:
     def byActiveWaypoint(self, t=-1):
         data = {}
         datum = self.globalsim[t]
-
-        time = datum[0]
         ids = datum[1]
         datum = np.array(datum[-2:])
 
@@ -244,8 +254,7 @@ class Simulator:
                 continue
 
             act_wpt = [datum[0, idx], datum[1, idx]]
-            wpt_idx = np.where(
-                abs(act_wpt[0]-self.route[:, 0]) <= 1e-10)[0][0]
+            wpt_idx = np.where(abs(act_wpt[0] - self.route[:, 0]) <= 1e-10)[0][0]
 
             if wpt_idx not in data:
                 data[wpt_idx] = [_id]
@@ -259,7 +268,7 @@ class Simulator:
         self.globalsim = []
         self.i = 0
         bs.core.simtime.setdt(0.1)
-        bs.stack.stack('FF')
+        bs.stack.stack("FF")
 
     def resetSim(self):
         bs.sim.reset()

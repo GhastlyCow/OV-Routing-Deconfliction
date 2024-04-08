@@ -1,10 +1,9 @@
 """This program generates routes for UAM aircraft as well as operational volumes
 """
 
-
 # Imports
 import os
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
@@ -12,12 +11,16 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Polygon
 
-from src.functions import *
-from src.GoogleEarthOut import EarthKML
-from src.OVGeneration import (dryvrConcurr, dryvrMain, spheroidConcurr,
-                              spheroidMain, OV, Segment, spheroidNewConcurr, spheroidNewMain)
+from src.functions import prepareSpace, drawArrayOVs, airspaceToXY, displayRouteAirspace, routeToLL, drawDryvrOVs
+
+# from src.GoogleEarthOut import EarthKML
+from src.OVGeneration import (
+    dryvrConcurr,
+    spheroidConcurr,
+    spheroidNewMain,
+)
 from src.RouteBuilding import RRTStar, AStar
 from src.Airspace import Airspace
 from src.Simulation import Simulator
@@ -26,30 +29,81 @@ from src.Simulation import Simulator
 __author__ = "Ellis Thompson"
 
 # Constants
-ROUTE_PATH = Path(".\\Google Earth Files\\DC_map") if os.name != 'posix' else Path(
-    "./Google Earth Files/DC_map")
-OUT_PATH = Path('.\\out\\') if os.name != 'posix' else Path('./out/')
-COLOURS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 0, 0), (255, 255, 255),
-           (255, 255, 0), (0, 255, 255), (255, 0, 255), (180, 40, 200)]
+ROUTE_PATH = Path(".\\Google Earth Files\\DC_map") if os.name != "posix" else Path("./Google Earth Files/DC_map")
+OUT_PATH = Path(".\\out\\") if os.name != "posix" else Path("./out/")
+COLOURS = [
+    (255, 0, 0),
+    (0, 255, 0),
+    (0, 0, 255),
+    (0, 0, 0),
+    (255, 255, 255),
+    (255, 255, 0),
+    (0, 255, 255),
+    (255, 0, 255),
+    (180, 40, 200),
+]
 
 
-def main(points: List[int] = None, show_plots: bool = True, max_workers: int = 20, ov_mode='dryvr', n_ac: int = 100, method: str = 'AStar', speed_bounds: List[int] = [23, 28]):
+def main(
+    points: List[int] = None,
+    show_plots: bool = True,
+    max_workers: int = 20,
+    ov_mode="dryvr",
+    n_ac: int = 100,
+    method: str = "AStar",
+    speed_bounds: List[int] = [23, 28],
+):
     start_time = perf_counter()
     # Import airspace from file
     airspace: dict = prepareSpace(ROUTE_PATH)
-    ovs = Airspace(airspace['airspace'])
-    ovs.load_airspace(['Airspace OVs/8-2 20 Operational Volumes 1.npy',
-                       'Airspace OVs/2-0 80 Operational Volumes 2.npy',
-                       'Airspace OVs/4-8 120 Operational Volumes 3.npy',
-                       'Airspace OVs/2-5 60 Operational Volumes 4.npy',
-                       'Airspace OVs/5-0 100 Operational Volumes 5.npy',
-                       'Airspace OVs/4-7 100 Operational Volumes 6.npy',
-                       'Airspace OVs/5-8 210 Operational Volumes 7.npy',
-                       'Airspace OVs/0-5 230 Operational Volumes 8.npy',
-                       'Airspace OVs/8-5 160 Operational Volumes 9.npy',
-                       'Airspace OVs/2-3 120 Operational Volumes 10.npy'
-                       ], 
-                      [248, 188, 22, 157, 117,7,109,0,202, 166, 41,83,223,94,92, 52, 79,18,64,125,131,289,163,13,300, 1, 14, 38,97,188, 249])
+    ovs = Airspace(airspace["airspace"])
+    # ovs.load_airspace(
+    #     [
+    #         "Airspace OVs/8-2 20 Operational Volumes 1.npy",
+    #         "Airspace OVs/2-0 80 Operational Volumes 2.npy",
+    #         "Airspace OVs/4-8 120 Operational Volumes 3.npy",
+    #         "Airspace OVs/2-5 60 Operational Volumes 4.npy",
+    #         "Airspace OVs/5-0 100 Operational Volumes 5.npy",
+    #         "Airspace OVs/4-7 100 Operational Volumes 6.npy",
+    #         "Airspace OVs/5-8 210 Operational Volumes 7.npy",
+    #         "Airspace OVs/0-5 230 Operational Volumes 8.npy",
+    #         "Airspace OVs/8-5 160 Operational Volumes 9.npy",
+    #         "Airspace OVs/2-3 120 Operational Volumes 10.npy",
+    #     ],
+    #     [
+    #         248,
+    #         188,
+    #         22,
+    #         157,
+    #         117,
+    #         7,
+    #         109,
+    #         0,
+    #         202,
+    #         166,
+    #         41,
+    #         83,
+    #         223,
+    #         94,
+    #         92,
+    #         52,
+    #         79,
+    #         18,
+    #         64,
+    #         125,
+    #         131,
+    #         289,
+    #         163,
+    #         13,
+    #         300,
+    #         1,
+    #         14,
+    #         38,
+    #         97,
+    #         188,
+    #         249,
+    #     ],
+    # )
     # ovs.load_airspace(['Airspace OVs/shperoid Operational Volumes.npy'], [0])
 
     # ovs_np = np.load('Airspace OVs\Operational Volumes.npy', allow_pickle=True)
@@ -57,34 +111,31 @@ def main(points: List[int] = None, show_plots: bool = True, max_workers: int = 2
 
     # Pick some random points if none are provided
     if not points or len(points) < 2:
-        points: np.ndarray = np.random.choice(
-            len(airspace["points"]), 2, replace=False)
+        points: np.ndarray = np.random.choice(len(airspace["points"]), 2, replace=False)
 
     # Prepare output folders
     date_path: Path = Path.joinpath(
-        OUT_PATH, f'{datetime.now().strftime("%d-%m-%Y %H-%M-%S")}-Route ({points[0]}-{points[1]})')
+        OUT_PATH, f'{datetime.now().strftime("%d-%m-%Y %H-%M-%S")}-Route ({points[0]}-{points[1]})'
+    )
     os.mkdir(date_path)
-    path: Path = Path.joinpath(date_path, 'routes.kml')
+    # path: Path = Path.joinpath(date_path, "routes.kml")
 
     s = perf_counter()
 
     # Generate route
-    if method == 'AStar':
-        route = genAStar(points[0], points[1], airspace,
-                         ovs, speed_bounds, show_plots=show_plots)
+    if method == "AStar":
+        route = genAStar(points[0], points[1], airspace, ovs, speed_bounds, show_plots=show_plots)
 
         route = np.asarray([[point.x, point.y] for point in route.route])
         optimised = []
         print(route)
-    elif method == 'RRT':
-        print('USING RRT')
-        route: RRTStar = genRRT(
-            points[0], points[1], airspace, show_plots=show_plots, M=200)
+    elif method == "RRT":
+        print("USING RRT")
+        route: RRTStar = genRRT(points[0], points[1], airspace, show_plots=show_plots, M=200)
     else:
-        raise ValueError(
-            f'{method}, is not a valid route generation technique')
-        
-    np.save(Path.joinpath(date_path,'Route.npy'), route)
+        raise ValueError(f"{method}, is not a valid route generation technique")
+
+    np.save(Path.joinpath(date_path, "Route.npy"), route)
     # return
 
     # Prepare KML output
@@ -101,39 +152,38 @@ def main(points: List[int] = None, show_plots: bool = True, max_workers: int = 2
     #     f'{str(date_path)}/({points[0]}-{points[1]})', airspace)
     # Run the simulation
     traces, operational_volumes = runSim(
-        route, airspace=airspace, speed_bounds=speed_bounds, show_plots=True, n_ac=n_ac)
-    
-    print(perf_counter()-s)
-    
+        route, airspace=airspace, speed_bounds=speed_bounds, show_plots=True, n_ac=n_ac
+    )
+
+    print(perf_counter() - s)
 
     # Save sim traces
-    np.save(Path.joinpath(date_path, 'Sim Traces.npy'), traces)
+    np.save(Path.joinpath(date_path, "Sim Traces.npy"), traces)
 
     # Generatr OVs for the supplied route
     # operational_volumes = genOVs(
     #     traces, airspace, optimised, max_workers=max_workers, ov_mode=ov_mode, show_plots=show_plots)
 
-    if not ov_mode == 'spheroid':
-        np.save(Path.joinpath(date_path, 'Operational Volumes.npy'),
-            operational_volumes)
+    if not ov_mode == "spheroid":
+        np.save(Path.joinpath(date_path, "Operational Volumes.npy"), operational_volumes)
     else:
         contract = []
         for ov in operational_volumes:
             contract.append(ov.as_numpy())
-        np.save(Path.joinpath(date_path, 'shperoid Operational Volumes.npy'),
-            contract)
+        np.save(Path.joinpath(date_path, "shperoid Operational Volumes.npy"), contract)
 
     if show_plots:
         drawArrayOVs(airspace, operational_volumes, optimised, traces)
 
     # System completion time:
-    print('========== COMPLETION TIME ==========')
-    print(
-        f'System took {round(perf_counter()-start_time, 2)} seconds to complete')
-    print('=====================================')
+    print("========== COMPLETION TIME ==========")
+    print(f"System took {round(perf_counter()-start_time, 2)} seconds to complete")
+    print("=====================================")
 
 
-def genRRT(start: int, goal: int, airspace: dict, n_iter=5000, step_size=500, end_dist=1000, M=200, show_plots: bool = False) -> RRTStar:
+def genRRT(
+    start: int, goal: int, airspace: dict, n_iter=5000, step_size=500, end_dist=1000, M=200, show_plots: bool = False
+) -> RRTStar:
     """Wrapper code for generating a route through RRT*
 
     Args:
@@ -148,46 +198,58 @@ def genRRT(start: int, goal: int, airspace: dict, n_iter=5000, step_size=500, en
 
     Returns:
         RRTStar: Returns the RRT object
-    """
+    """  # noqa: E501
 
     # Prepare local airspace
     # print(airspace)
     converted_airspace: dict = airspaceToXY(airspace)
 
     # Initilise RRT class
-    rrt: RRTStar = RRTStar(converted_airspace['points'][start],
-                           converted_airspace['points'][goal], converted_airspace, n_iter=n_iter, step_size=step_size, end_dist=end_dist, M=M, orig=airspace)
+    rrt: RRTStar = RRTStar(
+        converted_airspace["points"][start],
+        converted_airspace["points"][goal],
+        converted_airspace,
+        n_iter=n_iter,
+        step_size=step_size,
+        end_dist=end_dist,
+        M=M,
+        orig=airspace,
+    )
 
     # Path finding
     rrt.findPath()
 
     # Route display
     if show_plots:
-        displayRouteAirspace(airspace, routeToLL(airspace, rrt.route), routeToLL(
-            airspace, rrt.optimised_route), airspace["points"][start], airspace["points"][goal], None)
+        displayRouteAirspace(
+            airspace,
+            routeToLL(airspace, rrt.route),
+            routeToLL(airspace, rrt.optimised_route),
+            airspace["points"][start],
+            airspace["points"][goal],
+            None,
+        )
 
     return rrt
 
 
 def genAStar(start: int, goal: int, airspace: dict, ovs, speed_bounds, n_iter=20000, dist=500, show_plots=True):
     # Initilise RRT class
-    offset = np.random.poisson(lam=5)*20
+    offset = np.random.poisson(lam=5) * 20
     # offset = -27
-    
+
     found = False
-    
+
     while offset <= 300 and not found:
-        astar: AStar = AStar(
-        airspace['airspace'], airspace['nfzs'].values(), offset = offset)
-        print('OFFSET = :',astar.offset)
-        print(start,goal)
+        astar: AStar = AStar(airspace["airspace"], airspace["nfzs"].values(), offset=offset)
+        print("OFFSET = :", astar.offset)
+        print(start, goal)
 
-        start_pos = (airspace['points'][start].x, airspace['points'][start].y)
-        goal_pos = (airspace['points'][goal].x, airspace['points'][goal].y)
+        start_pos = (airspace["points"][start].x, airspace["points"][start].y)
+        goal_pos = (airspace["points"][goal].x, airspace["points"][goal].y)
 
-        path = astar.find_path(
-        start_pos, goal_pos, ovs, n_iter=n_iter, dist=dist, break_on_found=False)
-        
+        path = astar.find_path(start_pos, goal_pos, ovs, n_iter=n_iter, dist=dist, break_on_found=False)
+
         if path is None:
             offset += 30
         else:
@@ -195,13 +257,20 @@ def genAStar(start: int, goal: int, airspace: dict, ovs, speed_bounds, n_iter=20
 
     # Route display
     if show_plots:
-        displayRouteAirspace(
-            airspace, path, [], airspace["points"][start], airspace["points"][goal], ovs)
+        displayRouteAirspace(airspace, path, [], airspace["points"][start], airspace["points"][goal], ovs)
 
     return astar
 
 
-def runSim(route: np.ndarray, airspace: dict, speed_bounds, max_itr: int = 100, n_ac: int = 100, th: int = 60, show_plots: bool = False):
+def runSim(
+    route: np.ndarray,
+    airspace: dict,
+    speed_bounds,
+    max_itr: int = 100,
+    n_ac: int = 100,
+    th: int = 60,
+    show_plots: bool = False,
+):
     route[:, [0, 1]] = route[:, [1, 0]]
     state_storer = None
     ovs = []
@@ -210,7 +279,7 @@ def runSim(route: np.ndarray, airspace: dict, speed_bounds, max_itr: int = 100, 
     sim: Simulator = Simulator(speed_bounds=speed_bounds, airspace=airspace)
 
     for i in range(max_itr):
-        print(f'====== Running iteration {i} ======')
+        print(f"====== Running iteration {i} ======")
 
         sim.reset()
 
@@ -229,11 +298,9 @@ def runSim(route: np.ndarray, airspace: dict, speed_bounds, max_itr: int = 100, 
             state_storer = np.array([run_states])
         else:
             try:
-                state_storer = np.append(
-                    state_storer, [run_states], axis=0)
-            except:
-                print(
-                    np.array([np.array(list(sim.states.values()))]).shape, state_storer.shape)
+                state_storer = np.append(state_storer, [run_states], axis=0)
+            except Exception:
+                print(np.array([np.array(list(sim.states.values()))]).shape, state_storer.shape)
 
         run_states[:, :, [1, 2]] = run_states[:, :, [2, 1]]
 
@@ -245,8 +312,7 @@ def runSim(route: np.ndarray, airspace: dict, speed_bounds, max_itr: int = 100, 
 
         # print(airspace['nfzs'].items())
 
-        print(any(ov_poly.intersects(nfz)
-              for nfz in airspace['nfzs'].values()))
+        print(any(ov_poly.intersects(nfz) for nfz in airspace["nfzs"].values()))
 
         ovs.append(ov)
 
@@ -259,19 +325,26 @@ def runSim(route: np.ndarray, airspace: dict, speed_bounds, max_itr: int = 100, 
     return state_storer, np.asarray(ovs, dtype=object)
 
 
-def genOVs(traces: np.ndarray, airspace: dict, route, n_traces: int = 20, max_workers: int = 20, show_plots: bool = False, ov_mode='dryvr'):
-    print('*'*50)
-    print('{:^50}'.format(f'Attempting to generate {traces.shape[0]} OVs'))
-    print('*'*50)
+def genOVs(
+    traces: np.ndarray,
+    airspace: dict,
+    route,
+    n_traces: int = 20,
+    max_workers: int = 20,
+    show_plots: bool = False,
+    ov_mode="dryvr",
+):
+    print("*" * 50)
+    print("{:^50}".format(f"Attempting to generate {traces.shape[0]} OVs"))
+    print("*" * 50)
 
-    operational_volumes = np.empty(
-        (traces.shape[0]), dtype=object)
+    operational_volumes = np.empty((traces.shape[0]), dtype=object)
 
     args = ((traces[i], n_traces) for i in range(len(traces)))
 
-    if ov_mode == 'dryvr':
+    if ov_mode == "dryvr":
         method = dryvrConcurr
-    elif ov_mode == 'spheroid':
+    elif ov_mode == "spheroid":
         method = spheroidConcurr
     else:
         raise ValueError(f'"{ov_mode}" is not a valid OV generation mode')
@@ -283,9 +356,9 @@ def genOVs(traces: np.ndarray, airspace: dict, route, n_traces: int = 20, max_wo
     if not show_plots:
         return operational_volumes
 
-    if ov_mode == 'dryvr':
+    if ov_mode == "dryvr":
         drawDryvrOVs(airspace, operational_volumes, route, traces)
-    elif ov_mode == 'spheroid':
+    elif ov_mode == "spheroid":
         drawArrayOVs(airspace, operational_volumes, route, traces)
     else:
         raise ValueError(f'"{ov_mode}" is not a valid OV generation mode')
@@ -294,5 +367,12 @@ def genOVs(traces: np.ndarray, airspace: dict, route, n_traces: int = 20, max_wo
 
 
 if __name__ == "__main__":
-    main(list(np.random.choice(list(range(9)),size = 2, replace=False)), show_plots=True,
-         max_workers=20, method='AStar', ov_mode='spheroid', n_ac=100, speed_bounds=[17,21])
+    main(
+        list(np.random.choice(list(range(9)), size=2, replace=False)),
+        show_plots=True,
+        max_workers=20,
+        method="AStar",
+        ov_mode="spheroid",
+        n_ac=100,
+        speed_bounds=[17, 21],
+    )

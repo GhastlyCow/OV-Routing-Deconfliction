@@ -1,12 +1,7 @@
-import geopy
-import geopy.distance
 import numpy as np
-from geographiclib.geodesic import Geodesic
-from shapely.geometry import LineString, Point, Polygon, MultiLineString
+from shapely.geometry import LineString, Point
 from tqdm import trange
-import concurrent.futures
-import matplotlib.pyplot as plt
-from math import radians, cos, sin, asin, sqrt, atan2, degrees
+from math import radians, cos, sin, sqrt, atan2, degrees
 
 from .Node import Node
 from .PriorityDictionary import PriorityDictionary
@@ -25,7 +20,7 @@ def haversine(lon1, lat1, lon2, lat2):
     phi1, phi2 = lat1 * DEG_TO_RAD, lat2 * DEG_TO_RAD
     dphi = (lat2 - lat1) * DEG_TO_RAD
     dlambda = (lon2 - lon1) * DEG_TO_RAD
-    a = sin(dphi / 2.0)**2 + cos(phi1) * cos(phi2) * sin(dlambda / 2.0)**2
+    a = sin(dphi / 2.0) ** 2 + cos(phi1) * cos(phi2) * sin(dlambda / 2.0) ** 2
     c = 2.0 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
@@ -43,8 +38,7 @@ def haversine_array(lon1_arr, lat1_arr, lon2_arr, lat2_arr):
     dlat = lat2_rad[:, np.newaxis] - lat1_rad
     dlon = lon2_rad[:, np.newaxis] - lon1_rad
 
-    a = np.sin(dlat / 2) ** 2 + np.cos(lat1_rad) * \
-        np.cos(lat2_rad) * np.sin(dlon / 2) ** 2
+    a = np.sin(dlat / 2) ** 2 + np.cos(lat1_rad) * np.cos(lat2_rad) * np.sin(dlon / 2) ** 2
 
     c = 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
     return R * c
@@ -80,12 +74,12 @@ def get_destination(lon, lat, distance, heading):
     bearing = np.radians(heading)
 
     # Calculate the destination latitude using the haversine formula
-    lat2 = np.arcsin(np.sin(lat1) * np.cos(distance / R) +
-                     np.cos(lat1) * np.sin(distance / R) * np.cos(bearing))
+    lat2 = np.arcsin(np.sin(lat1) * np.cos(distance / R) + np.cos(lat1) * np.sin(distance / R) * np.cos(bearing))
 
     # Calculate the destination longitude using the haversine formula
-    lon2 = lon1 + np.arctan2(np.sin(bearing) * np.sin(distance / R) * np.cos(lat1),
-                             np.cos(distance / R) - np.sin(lat1) * np.sin(lat2))
+    lon2 = lon1 + np.arctan2(
+        np.sin(bearing) * np.sin(distance / R) * np.cos(lat1), np.cos(distance / R) - np.sin(lat1) * np.sin(lat2)
+    )
 
     return [np.degrees(lon2), np.degrees(lat2)]
 
@@ -95,20 +89,20 @@ def get_destinations(lon, lat, distance, headings):
     bearings = np.radians(headings)
 
     # Calculate the destination latitudes using the haversine formula
-    lat2 = np.arcsin(np.sin(lat1) * np.cos(distance / R) +
-                     np.cos(lat1) * np.sin(distance / R) * np.cos(bearings))
+    lat2 = np.arcsin(np.sin(lat1) * np.cos(distance / R) + np.cos(lat1) * np.sin(distance / R) * np.cos(bearings))
 
     # Calculate the destination longitudes using the haversine formula
-    lon2 = lon1 + np.arctan2(np.sin(bearings) * np.sin(distance / R) * np.cos(lat1),
-                             np.cos(distance / R) - np.sin(lat1) * np.sin(lat2))
+    lon2 = lon1 + np.arctan2(
+        np.sin(bearings) * np.sin(distance / R) * np.cos(lat1), np.cos(distance / R) - np.sin(lat1) * np.sin(lat2)
+    )
     return np.vstack((np.degrees(lon2), np.degrees(lat2))).T
 
 
 def get_arrival_bounds(min_speed, max_speed, dist, prev_times, offset):
-    early = (dist/max_speed) + prev_times[0]
-    late = (dist/min_speed) + prev_times[1]
+    early = (dist / max_speed) + prev_times[0]
+    late = (dist / min_speed) + prev_times[1]
 
-    return (early+offset, late+offset)
+    return (early + offset, late + offset)
 
 
 class AStar:
@@ -117,8 +111,7 @@ class AStar:
         self.closed = {}
         self.nfzs = nfzs
         self.bounds = bounds
-        self.min_speed, self.max_speed = round(
-            cruise_speed*0.8, 2), round(cruise_speed*1.2, 2)
+        self.min_speed, self.max_speed = round(cruise_speed * 0.8, 2), round(cruise_speed * 1.2, 2)
 
         self.offset = offset
 
@@ -128,14 +121,11 @@ class AStar:
         if radial is not None:
             semi_radial = radial // 2
 
-            intervals = np.arange(direction - semi_radial,
-                                  direction+semi_radial, sep)
+            intervals = np.arange(direction - semi_radial, direction + semi_radial, sep)
         else:
-            intervals = np.arange(direction - self.semi_radial,
-                                  direction+self.semi_radial, sep)
+            intervals = np.arange(direction - self.semi_radial, direction + self.semi_radial, sep)
 
-        destinations = np.around(get_destinations(
-            *start.pos, dist, intervals), decimals=3)
+        destinations = np.around(get_destinations(*start.pos, dist, intervals), decimals=3)
 
         for new_point in self.get_new_point(start, destinations):
             self.add_new_point(new_point)
@@ -166,8 +156,7 @@ class AStar:
                 start,
                 start.g + to_point_dist,
                 heuristic,
-                times=get_arrival_bounds(
-                    self.min_speed, self.max_speed, to_point_dist, start.times, self.offset)
+                times=get_arrival_bounds(self.min_speed, self.max_speed, to_point_dist, start.times, self.offset),
             )
 
             if self.check_ov_constraints(N):
@@ -182,7 +171,7 @@ class AStar:
         return self.active[new_point.pos]
 
     def get_route(self, node):
-        print(f'Length {round(node.g/1000,2)}km')
+        print(f"Length {round(node.g/1000,2)}km")
 
         route = [Point(node.pos)]
         while node.parent is not None:
@@ -190,22 +179,32 @@ class AStar:
             route.insert(0, Point(node.pos))
         return list(route)
 
-    def find_path(self, start, goal, ovs=None, sep: int = 10, dist: float = 500.0, radial: int = 120, n_iter: int = 5000, break_on_found: bool = False, return_route: bool = True):
+    def find_path(
+        self,
+        start,
+        goal,
+        ovs=None,
+        sep: int = 10,
+        dist: float = 500.0,
+        radial: int = 120,
+        n_iter: int = 5000,
+        break_on_found: bool = False,
+        return_route: bool = True,
+    ):
 
         self.goal = goal
         self.ovs = ovs
-        self.start = Node(start, None, g=0,
-                          h=self.get_heuristic(start), times=(0, 0))
+        self.start = Node(start, None, g=0, h=self.get_heuristic(start), times=(0, 0))
         self.active[start] = self.start
 
         end_node = None
 
         self.semi_radial = radial // 2
 
-        min_valid_g = float('inf')
+        min_valid_g = float("inf")
 
-        print('Searching for a valid route...')
-        for _ in trange(n_iter, colour='#3399ff', desc='A* Path finding'):
+        print("Searching for a valid route...")
+        for _ in trange(n_iter, colour="#3399ff", desc="A* Path finding"):
             # if i % 1000 == 0:
             #     plt.scatter(*self.start.pos, c='green')
             #     plt.scatter(*self.goal, c='red')
@@ -231,28 +230,33 @@ class AStar:
             if active_node == self.start:
                 self.expand_point(active_node, sep=sep, dist=dist, radial=360)
             else:
-                heading = (get_heading(
-                    *active_node.parent.pos, *active_node.pos))
-                self.expand_point(active_node, direction=heading,
-                                  radial=radial, sep=sep, dist=dist)
+                heading = get_heading(*active_node.parent.pos, *active_node.pos)
+                self.expand_point(active_node, direction=heading, radial=radial, sep=sep, dist=dist)
 
             if active_node.h <= dist:
                 path_segment = LineString([active_node.pos, self.goal])
 
                 if self.check_airspace_constraints(Point(self.goal), path_segment):
                     to_point_dist = haversine(*active_node.pos, *self.goal)
-                    new_point = Node(self.goal, active_node, g=active_node.g +
-                                     to_point_dist, h=0, times=get_arrival_bounds(self.min_speed, self.max_speed, to_point_dist, active_node.times, self.offset))
+                    new_point = Node(
+                        self.goal,
+                        active_node,
+                        g=active_node.g + to_point_dist,
+                        h=0,
+                        times=get_arrival_bounds(
+                            self.min_speed, self.max_speed, to_point_dist, active_node.times, self.offset
+                        ),
+                    )
 
                     if not self.check_ov_constraints(new_point):
                         continue
 
                     if end_node is None:
-                        print('\nValid path found!')
+                        print("\nValid path found!")
                     elif new_point.g > end_node.g:
                         continue
                     else:
-                        print('\nBetter path found!')
+                        print("\nBetter path found!")
 
                     end_node = self.add_new_point(new_point)
 
@@ -261,10 +265,10 @@ class AStar:
         self.route = None
 
         if end_node:
-            print('A path has been found!')
+            print("A path has been found!")
             self.route = self.get_route(end_node)
         else:
-            print('Error no valid route found')
+            print("Error no valid route found")
 
         return self.route if return_route else end_node
 
@@ -310,7 +314,7 @@ class AStar:
         goal_heading = get_heading(*start, *self.goal)
         direct_path = LineString((start, self.goal))
 
-        nfz_heuristics = [None]*len(self.nfzs)
+        nfz_heuristics = [None] * len(self.nfzs)
 
         for i, nfz in enumerate(self.nfzs):
             if direct_path.intersects(nfz):
@@ -331,7 +335,7 @@ class AStar:
                     # if d > _min:
                     #     continue
 
-                    h = get_heading(*start, *point)-goal_heading
+                    h = get_heading(*start, *point) - goal_heading
 
                     if h <= goal_heading and (less[0] is None or h < less[0]):
                         less = (h, d, point)
@@ -343,8 +347,7 @@ class AStar:
                 elif more[0] is None:
                     nfz_heuristics[i] = less
                 else:
-                    nfz_heuristics[i] = less if abs(
-                        less[0]) <= abs(more[0]) else more
+                    nfz_heuristics[i] = less if abs(less[0]) <= abs(more[0]) else more
 
         closest_i = -1
 
@@ -357,16 +360,14 @@ class AStar:
                     closest_i = i
                 elif nfz_heuristics[i][1] < nfz_heuristics[closest_i][1]:
                     closest_i = i
-            except:
+            except Exception:
                 print(i, nfz_heuristics[i][1], nfz_heuristics[closest_i][1])
                 raise Exception()
 
-        m = 1.
+        m = 1.0
 
         if closest_i == -1:
-            return m*haversine(*start, *self.goal)
-
-        ls = LineString([start, nfz_heuristics[closest_i][2], self.goal])
+            return m * haversine(*start, *self.goal)
 
         # return 1.3*(haversine(*nfz_heuristics[closest_i][2], *self.goal) + nfz_heuristics[closest_i][1])
-        return m*(haversine(*nfz_heuristics[closest_i][2], *self.goal) + nfz_heuristics[closest_i][1])
+        return m * (haversine(*nfz_heuristics[closest_i][2], *self.goal) + nfz_heuristics[closest_i][1])

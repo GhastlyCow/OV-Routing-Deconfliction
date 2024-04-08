@@ -1,14 +1,14 @@
 """This holds the code for the Graph for RRT*-FN.100
 The Graph contains the bulk of the route generation code for selecting new waypoints, verifying validity, connecting the graph etc.
-"""
+"""  # noqa: 501
+
 # Imports
 import random
-from typing import List, Tuple
+from typing import List
 
 
 import numpy as np
 from shapely.geometry import Point, LineString
-from shapely.ops import nearest_points
 
 from .Node import Node
 
@@ -16,8 +16,14 @@ MIN_DIST = 50
 
 
 class Graph:
-    def __init__(self, start: Point, goal: Point, airspace: dict,
-                 min_step: float = 50.0, min_end_dist=100,):
+    def __init__(
+        self,
+        start: Point,
+        goal: Point,
+        airspace: dict,
+        min_step: float = 50.0,
+        min_end_dist=100,
+    ):
         self.start = Node(start, None, 0)
         self.goal = Node(goal, None, float("inf"))
 
@@ -30,10 +36,14 @@ class Graph:
         self.last_added = self.start
         self.min_distance = self.start.pos.distance(self.goal.pos)
 
-        print(min(min(self.start.pos.distance(nfz) for nfz in self.airspace['nfzs'].values(
-        )), min(self.goal.pos.distance(nfz) for nfz in self.airspace['nfzs'].values())))
+        print(
+            min(
+                min(self.start.pos.distance(nfz) for nfz in self.airspace["nfzs"].values()),
+                min(self.goal.pos.distance(nfz) for nfz in self.airspace["nfzs"].values()),
+            )
+        )
 
-    @ property
+    @property
     def success(self) -> bool:
         return self.goal in self.vertices
 
@@ -41,8 +51,7 @@ class Graph:
         self.vertices.add(vertex)
         self.last_added = vertex
 
-        self.min_distance = min(
-            self.min_distance, vertex.pos.distance(self.goal.pos))
+        self.min_distance = min(self.min_distance, vertex.pos.distance(self.goal.pos))
 
     def randomPosition(self, rand) -> Point:
 
@@ -53,11 +62,11 @@ class Graph:
             maxx += 1000
             maxy += 1000
         else:
-            minx = self.goal.x-(self.min_end_dist*2)
-            miny = self.goal.y-(self.min_end_dist*2)
+            minx = self.goal.x - (self.min_end_dist * 2)
+            miny = self.goal.y - (self.min_end_dist * 2)
 
-            maxx = self.goal.x+(self.min_end_dist*2)
-            maxy = self.goal.y+(self.min_end_dist*2)
+            maxx = self.goal.x + (self.min_end_dist * 2)
+            maxy = self.goal.y + (self.min_end_dist * 2)
 
         posx = np.random.uniform(minx, maxx)
         posy = np.random.uniform(miny, maxy)
@@ -74,7 +83,7 @@ class Graph:
         #     return True
 
         return any(line.distance(nfz) < MIN_DIST for nfz in self.airspace["nfzs"].values()) or line.intersects(
-            LineString(list(self.airspace['airspace'].exterior.coords))
+            LineString(list(self.airspace["airspace"].exterior.coords))
         )
 
     def newVertex(self) -> Node:
@@ -103,26 +112,26 @@ class Graph:
             if near_vertex is None:
                 continue
 
-            dirn = np.array(random_position.xy).reshape(-1) - np.array(
-                near_vertex.pos.xy
-            ).reshape(-1)
+            dirn = np.array(random_position.xy).reshape(-1) - np.array(near_vertex.pos.xy).reshape(-1)
             length = np.linalg.norm(dirn)
 
             dirn = (dirn / length) * min(self.min_step, length)
 
-            new_point = Point(
-                [near_vertex.x + dirn[0], near_vertex.y + dirn[1]])
+            new_point = Point([near_vertex.x + dirn[0], near_vertex.y + dirn[1]])
 
-            if self.checkCollision(near_vertex.pos, new_point) or (not self.airspace['airspace'].contains(new_point)) or any(nfz.contains(new_point) for nfz in self.airspace['nfzs'].values()):
+            if (
+                self.checkCollision(near_vertex.pos, new_point)
+                or (not self.airspace["airspace"].contains(new_point))
+                or any(nfz.contains(new_point) for nfz in self.airspace["nfzs"].values())
+            ):
                 near_vertex = None
                 continue
 
-            if self.goal.distance(new_point) < self.min_end_dist and (not self.checkCollision(self.goal.pos, near_vertex.pos)):
+            if self.goal.distance(new_point) < self.min_end_dist and (
+                not self.checkCollision(self.goal.pos, near_vertex.pos)
+            ):
 
-                self.goal.changeParent(
-                    near_vertex, near_vertex.cost +
-                    near_vertex.distance(self.goal)
-                )
+                self.goal.changeParent(near_vertex, near_vertex.cost + near_vertex.distance(self.goal))
                 return self.goal
 
         return Node(new_point, near_vertex, near_vertex.cost + near_vertex.distance(new_point))
@@ -131,21 +140,20 @@ class Graph:
         for vex in self.vertices:
             dist = vex.distance(self.last_added)
 
-            if (
-                vex == self.last_added
-                or dist > self.min_step
-                or vex == self.last_added.parent
-            ):
+            if vex == self.last_added or dist > self.min_step or vex == self.last_added.parent:
                 continue
 
             if (self.last_added.cost + dist < vex.cost) and (not self.checkCollision(self.last_added.pos, vex.pos)):
                 vex.changeParent(self.last_added, self.last_added.cost + dist)
 
     def repairLength(self) -> None:
-        childless = [vex for vex in self.vertices if (vex is not self.last_added
-                                                      and len(vex.children) == 0
-                                                      and vex is not self.goal
-                                                      and vex is not self.start)]
+        childless = [
+            vex
+            for vex in self.vertices
+            if (
+                vex is not self.last_added and len(vex.children) == 0 and vex is not self.goal and vex is not self.start
+            )
+        ]
 
         if not childless:
             return
@@ -159,18 +167,17 @@ class Graph:
         path = LineString(path)
         distances = np.arange(0, path.length, 10)
 
-        points = [path.interpolate(d)
-                  for d in distances]+[Point(path.coords[-1])]
+        points = [path.interpolate(d) for d in distances] + [Point(path.coords[-1])]
 
         path = points
 
         optimised = [points[-1]]
 
-        i = len(path)-1
+        i = len(path) - 1
 
         while i > 0:
             j = 0
-            while j < i-1:
+            while j < i - 1:
                 ls = LineString((path[i], path[j]))
 
                 # if any(
@@ -195,8 +202,7 @@ class Graph:
         path = LineString([Point(c[0], c[1]) for c in list(ls.coords)])
         distances = np.arange(0, path.length, 10)
 
-        points = [path.interpolate(d)
-                  for d in distances]+[Point(path.coords[-1])]
+        points = [path.interpolate(d) for d in distances] + [Point(path.coords[-1])]
 
         path = points
 
@@ -206,7 +212,7 @@ class Graph:
 
         while i < len(path) - 1:
             j = len(path) - 1
-            while j > i+1:
+            while j > i + 1:
                 ls = LineString((path[i], path[j]))
 
                 # if any(
@@ -238,8 +244,7 @@ class Graph:
         for _ in range(iterations):
             path = self.shortenOnPath(path)
 
-        print(min(LineString(path).distance(nfz)
-              for nfz in self.airspace['nfzs'].values()))
+        print(min(LineString(path).distance(nfz) for nfz in self.airspace["nfzs"].values()))
 
         return path
         # return path

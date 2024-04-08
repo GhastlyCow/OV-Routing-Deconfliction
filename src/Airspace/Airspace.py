@@ -1,17 +1,10 @@
 import numpy as np
 from shapely.geometry import Polygon
-
-import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
+from shapely.ops import unary_union
 
 MIN_START = 30
 MAX_START = 80
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
-from shapely import Polygon
-from shapely.ops import unary_union
 
 
 class Segment:
@@ -22,29 +15,26 @@ class Segment:
 
     @property
     def shape(self):
-        inv_cov = np.linalg.inv(self.cov)
         eigenvals, eigenvecs = np.linalg.eigh(self.cov)
 
         idx = eigenvals.argsort()[::-1]
         eigenvals = eigenvals[idx]
         eigenvecs = eigenvecs[:, idx]
 
-        theta = np.degrees(np.arctan2(*eigenvecs[:, 0][:: -1]))
+        theta = np.degrees(np.arctan2(*eigenvecs[:, 0][::-1]))
 
         width = 2 * np.sqrt(eigenvals[0]) * self.z
         height = 2 * np.sqrt(eigenvals[1]) * self.z
 
-        points = Ellipse(xy=self.mu, width=width, height=height,
-                         angle=theta, fill=False, linewidth=2).get_verts()
+        points = Ellipse(xy=self.mu, width=width, height=height, angle=theta, fill=False, linewidth=2).get_verts()
 
         return Polygon(points)
-    
+
     def as_array(self):
         out = self.cov.flatten()
         out = np.append(out, self.mu)
-        out = np.append(out,self.z)
+        out = np.append(out, self.z)
         return out
-
 
 
 class classOV:
@@ -53,15 +43,14 @@ class classOV:
 
     def __len__(self):
         return len(self.segments)
-    
+
     def as_numpy(self):
-        out = np.zeros((len(self),7))
-        
+        out = np.zeros((len(self), 7))
+
         for i, seg in enumerate(self.segments):
-            out[i,:] = seg.as_array()
-            
-        return(out)
-        
+            out[i, :] = seg.as_array()
+
+        return out
 
     def insert(self, segment):
         self.segments.append(segment)
@@ -78,7 +67,7 @@ class OV:
     def __init__(self, s_time, duration, ov):
         self.s_time = s_time
         self.duration = duration
-        self.e_time = s_time+duration
+        self.e_time = s_time + duration
         self.ov = Polygon(ov)
 
 
@@ -90,10 +79,9 @@ class Airspace:
         self.bounds = np.asarray(list(zip(*bounds.exterior.coords.xy)))
 
     def load_airspace(self, paths, times, duration=60):
-        print(f'There are {len(paths)} existing contracts')
-        
-        
-        for i,path in enumerate(paths):
+        print(f"There are {len(paths)} existing contracts")
+
+        for i, path in enumerate(paths):
             ovs = np.load(path, allow_pickle=True)
 
             for ov in ovs:
@@ -104,13 +92,12 @@ class Airspace:
                     z = seg[6]
 
                     ov_class.insert(Segment(mu, cov, z))
-            
+
                 s_time = times[i]
-                self.add_ov(s_time, duration, 
-                            OV(s_time, duration,ov_class.shape))
+                self.add_ov(s_time, duration, OV(s_time, duration, ov_class.shape))
 
     def time_index(self, time):
-        return time//self.bracket_size
+        return time // self.bracket_size
 
     def get_ovs(self, bracket):
         return set(bracket) if (bracket := self.airspace.get(bracket)) else None
@@ -121,9 +108,9 @@ class Airspace:
     def add_ov(self, start_time, duration, ov):
         self.total_ovs += 1
         start_index = self.time_index(start_time)
-        end_index = self.time_index(start_time+duration)
+        end_index = self.time_index(start_time + duration)
 
-        for idx in range(start_index, end_index+1):
+        for idx in range(start_index, end_index + 1):
             if idx not in self.airspace:
                 self.airspace[idx] = [ov]
             else:
@@ -137,9 +124,8 @@ class Airspace:
 
     def print(self):
         for _id, val in self.airspace.items():
-            print(_id, ((_id*120), (_id*120)+119), len(val),
-                  [(ov.s_time, ov.e_time) for ov in val])
-        print(f'Total OVs:{self.total_ovs}')
+            print(_id, ((_id * 120), (_id * 120) + 119), len(val), [(ov.s_time, ov.e_time) for ov in val])
+        print(f"Total OVs:{self.total_ovs}")
 
     def get_all_ovs(self):
         ovs = set()

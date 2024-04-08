@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 from shapely import Polygon
 from shapely.ops import unary_union
@@ -13,29 +12,26 @@ class Segment:
 
     @property
     def shape(self):
-        inv_cov = np.linalg.inv(self.cov)
         eigenvals, eigenvecs = np.linalg.eigh(self.cov)
 
         idx = eigenvals.argsort()[::-1]
         eigenvals = eigenvals[idx]
         eigenvecs = eigenvecs[:, idx]
 
-        theta = np.degrees(np.arctan2(*eigenvecs[:, 0][:: -1]))
+        theta = np.degrees(np.arctan2(*eigenvecs[:, 0][::-1]))
 
         width = 2 * np.sqrt(eigenvals[0]) * self.z
         height = 2 * np.sqrt(eigenvals[1]) * self.z
 
-        points = Ellipse(xy=self.mu, width=width, height=height,
-                         angle=theta, fill=False, linewidth=2).get_verts()
+        points = Ellipse(xy=self.mu, width=width, height=height, angle=theta, fill=False, linewidth=2).get_verts()
 
         return Polygon(points)
-    
+
     def as_array(self):
         out = self.cov.flatten()
         out = np.append(out, self.mu)
-        out = np.append(out,self.z)
+        out = np.append(out, self.z)
         return out
-
 
 
 class OV:
@@ -44,15 +40,14 @@ class OV:
 
     def __len__(self):
         return len(self.segments)
-    
+
     def as_numpy(self):
-        out = np.zeros((len(self),7))
-        
+        out = np.zeros((len(self), 7))
+
         for i, seg in enumerate(self.segments):
-            out[i,:] = seg.as_array()
-            
-        return(out)
-        
+            out[i, :] = seg.as_array()
+
+        return out
 
     def insert(self, segment):
         self.segments.append(segment)

@@ -1,4 +1,3 @@
-import os
 import json
 from pathlib import Path
 from typing import List
@@ -21,20 +20,14 @@ def prepareSpace(path: Path) -> dict:
                     if airspace["airspace"] is None:
                         airspace = loadAirspace(feature["geometry"])
                     else:
-                        raise ValueError(
-                            "Duplicate enteries found for Airspace")
+                        raise ValueError("Duplicate enteries found for Airspace")
                 elif feature["geometry"]["type"] == "Polygon":
-                    airspace = addNFZ(
-                        feature["geometry"], airspace, feature["properties"]["Name"]
-                    )
+                    airspace = addNFZ(feature["geometry"], airspace, feature["properties"]["Name"])
                 elif feature["geometry"]["type"] == "Point":
                     if "points" in airspace:
-                        airspace["points"].append(
-                            Point(feature["geometry"]["coordinates"])
-                        )
+                        airspace["points"].append(Point(feature["geometry"]["coordinates"]))
                     else:
-                        airspace["points"] = [
-                            Point(feature["geometry"]["coordinates"])]
+                        airspace["points"] = [Point(feature["geometry"]["coordinates"])]
 
     print("Files Converted...", end="\n")
     return airspace
@@ -58,10 +51,9 @@ def discoverFiles(path: Path) -> List:
     folders = list(path.glob("*.geojson"))
 
     if not folders:
-        path = Path(str(path).replace('\\','/'))
-    
+        path = Path(str(path).replace("\\", "/"))
+
     folders = list(path.glob("*.geojson"))
-    
 
     print(f"\nDiscovered {len(folders)} .geojson files in `{path}`:")
     for file in folders:
