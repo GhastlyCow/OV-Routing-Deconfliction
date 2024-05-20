@@ -67,7 +67,7 @@ def main(
         OUT_PATH, f'{datetime.now().strftime("%d-%m-%Y %H-%M-%S")}-Route ({points[0]}-{points[1]})'
     )
     os.mkdir(date_path)
-    # path: Path = Path.joinpath(date_path, "routes.kml")
+    path: Path = Path.joinpath(date_path, "routes.kml")
 
     s = perf_counter()
 
@@ -168,7 +168,7 @@ def genRRT(
     return rrt
 
 
-def genAStar(start: int, goal: int, airspace: dict, ovs, speed_bounds, n_iter=50000, dist=500, show_plots=True):
+def genAStar(start: int, goal: int, airspace: dict, ovs, speed_bounds, n_iter=50000, dist=1000, show_plots=True):
     offset = np.random.poisson(lam=5) * 20
 
     found = False
@@ -300,12 +300,4 @@ def genOVs(
 
 
 if __name__ == "__main__":
-    main(
-        [0, 1],
-        show_plots=True,
-        max_workers=20,
-        method="RRT",
-        ov_mode="spheroid",
-        n_ac=100,
-        speed_bounds=[17, 21],
-    )
+    main([4,5], show_plots=True, max_workers=20, method='AStar', ov_mode='spheroid', n_ac=100, speed_bounds=[17,21])

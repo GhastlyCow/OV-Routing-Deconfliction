@@ -23,7 +23,7 @@ msgpack==1.0.4
 mypy-extensions==1.0.0
 nanoid==2.0.0
 numba==0.56.4
-numpy==1.24.2
+numpy
 packaging==23.0
 pandas==1.5.3
 pathspec==0.11.0

@@ -1,9 +1,40 @@
 {
-"type": "FeatureCollection",
-"name": "Vertiports",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "Name": "P1", "description": null }, "geometry": { "type": "Point", "coordinates": [ -97.4504185, 33.3620214 ] } },
-{ "type": "Feature", "properties": { "Name": "P2", "description": null }, "geometry": { "type": "Point", "coordinates": [ -97.0692215, 33.3032501 ] } }
-]
+  "type": "FeatureCollection",
+  "name": "Vertiports",
+  "crs": {
+    "type": "name",
+    "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "Name": "P1", "description": null },
+      "geometry": { "type": "Point", "coordinates": [-97.4504185, 33.3620214] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Name": "P2", "description": null },
+      "geometry": { "type": "Point", "coordinates": [-97.0692215, 33.3032501] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Name": "P3", "description": null },
+      "geometry": { "type": "Point", "coordinates": [-97.504185, 33.3620214] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Name": "P4", "description": null },
+      "geometry": { "type": "Point", "coordinates": [-97.192215, 33.3032501] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Name": "P3", "description": null },
+      "geometry": { "type": "Point", "coordinates": [-97.404185, 33.3620214] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Name": "P4", "description": null },
+      "geometry": { "type": "Point", "coordinates": [-97.0092215, 33.3032501] }
+    }
+  ]
 }
